@@ -42,6 +42,13 @@ class UserResource extends Resource
                             ->unique(ignoreRecord: true) // Valida que sea único
                             ->required()
                             ->mask('999999999'),
+                        // --- NUEVO CAMPO ---
+                        Forms\Components\TextInput::make('address')
+                            ->label('Dirección Domiciliaria')
+                            ->placeholder('Av. Principal 123, Mz A Lt 1...')
+                            ->maxLength(255)
+                            ->columnSpanFull() // Para que ocupe todo el ancho si usas columnas
+                            ->required(),
                         Forms\Components\TextInput::make('phone')
                             ->label('Teléfono')
                             ->tel(),
@@ -57,7 +64,7 @@ class UserResource extends Resource
                         Forms\Components\Select::make('role')
                             ->label('Rol en la empresa')
                             ->options([
-                                'Admin' => 'Administrador',
+                                'Admin' => 'Admin',
                                 'Accionista' => 'Accionista',
                                 'Contratado' => 'Contratado',
                                 'Secretaria' => 'Secretaria',
@@ -89,6 +96,7 @@ class UserResource extends Resource
                         'Admin' => 'danger',
                         'Accionista' => 'success',
                         'Contratado' => 'info',
+                        'Secretaria' => 'warning',
                         default => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('phone')
