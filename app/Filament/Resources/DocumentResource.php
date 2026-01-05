@@ -60,7 +60,7 @@ class DocumentResource extends Resource
                             // Filtro: Solo mostramos Accionistas y Choferes
                             ->relationship('user', 'name', modifyQueryUsing: fn ($query) => $query->whereIn('role', ['Accionista', 'Contratado']))
                             ->getOptionLabelFromRecordUsing(fn ($record) => "{$record->name} {$record->last_name} - " . ucfirst($record->role))
-                            ->searchable(['name', 'last_name', 'dni'])
+                            ->searchable(['name', 'last_name', 'dni', 'address'])
                             ->preload()
                             ->required()
                             ->live()
@@ -71,11 +71,14 @@ class DocumentResource extends Resource
                                 // 1. Llenamos datos personales siempre
                                 $set('content.nombre_completo', "$user->name $user->last_name");
                                 $set('content.dni', $user->dni);
-
-                                // --- AQUÍ EL CAMBIO: Jalamos la dirección real ---
-                                // Si el usuario no tiene dirección, ponemos un texto por defecto para que no salga vacío
-                                $set('content.direccion', $user->address ?? 'DIRECCIÓN NO REGISTRADA EN EL SISTEMA'); 
-                                // -------------------------------------------------
+                                
+                                // VALIDACIÓN VISUAL: Si no tiene dirección, avisamos
+                                $direccion = $user->address;
+                                if (empty($direccion)) {
+                                    // Opcional: Podrías lanzar una notificación aquí si quisieras
+                                    $direccion = '--- ACTUALICE LA DIRECCIÓN EN EL PERFIL DEL USUARIO ---';
+                                }
+                                $set('content.direccion', $direccion);
 
                                 // 2. LÓGICA CONDICIONAL DE VEHÍCULO
                                 // Solo buscamos auto automático si es "Solicitud de Chofer" (porque el auto ya existe)
@@ -98,7 +101,7 @@ class DocumentResource extends Resource
                         // Campos de solo lectura (se llenan solos al elegir al usuario)
                         Forms\Components\TextInput::make('content.nombre_completo')->label('Nombre')->readOnly(),
                         Forms\Components\TextInput::make('content.dni')->label('DNI')->readOnly(),
-                        Forms\Components\TextInput::make('content.direccion')->label('Dirección')->required(),
+                        Forms\Components\TextInput::make('content.direccion')->label('Dirección')->readOnly()->helperText('Para cambiar la dirección, edite el perfil del usuario en el menú "Users".')->required(),
                     ])->columns(3),
 
                 // --- SECCIÓN 3: NUEVO CHOFER (Solo visible si el tipo es Solicitud Chofer) ---
