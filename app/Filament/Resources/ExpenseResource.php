@@ -17,9 +17,10 @@ class ExpenseResource extends Resource
 {
     protected static ?string $model = Expense::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-arrow-trending-down';
+    //protected static ?string $navigationIcon = 'heroicon-o-arrow-trending-down';
 
     // --- TRADUCCIÓN ---
+    protected static ?string $navigationGroup = 'Finanzas';
     protected static ?string $navigationLabel = 'Egresos';
     protected static ?string $modelLabel = 'Egreso';
     protected static ?string $pluralModelLabel = 'Egresos';

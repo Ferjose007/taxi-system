@@ -17,6 +17,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Filament\Navigation\NavigationGroup;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -33,8 +34,25 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
-                \App\Filament\Pages\Dashboard::class,
+                //Pages\Dashboard::class,
             ])
+            // --- AQUÍ LA MAGIA PARA "DOCUMENTOS" ---
+            ->navigationGroups([
+                NavigationGroup::make()
+                    ->label('Administración')
+                    ->icon('heroicon-o-briefcase'), // Icono para el grupo
+                NavigationGroup::make()
+                    ->label('Finanzas')
+                    ->icon('heroicon-o-banknotes'), // Icono para el grupo
+                NavigationGroup::make()
+                    ->label('Documentos') // El nombre exacto de tu grupo
+                    ->icon('heroicon-o-folder-open') // El icono que quieras (Carpeta abierta)
+                    ->collapsed(true), // true = nace cerrado, false = nace abierto
+            ])
+            // ---------------------------------------
+
+            ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
+            ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
