@@ -66,6 +66,14 @@ class VehicleResource extends Resource
                             ->placeholder('Ej: Yaris')
                             ->required()
                             ->maxLength(20),
+                        
+                        // --- NUEVO CAMPO COLOR ---
+                        Forms\Components\TextInput::make('color')
+                            ->label('Color')
+                            ->placeholder('Ej: Rojo, Plata, Negro...')
+                            ->required() // Lo hacemos obligatorio para tener datos completos
+                            ->maxLength(30),
+                        // -------------------------
 
                         // 5. Año (Validación lógica)
                         Forms\Components\TextInput::make('year')
@@ -109,6 +117,10 @@ class VehicleResource extends Resource
 
                 Tables\Columns\TextColumn::make('model')
                     ->label('Modelo'),
+                
+                Tables\Columns\TextColumn::make('color') // <--- NUEVO
+                ->label('Color')
+                ->searchable(),
 
                 // Mostrar nombre del dueño
                 Tables\Columns\TextColumn::make('owner.name')

@@ -49,6 +49,12 @@ class UserResource extends Resource
                             ->maxLength(255)
                             ->columnSpanFull() // Para que ocupe todo el ancho si usas columnas
                             ->required(),
+                        Forms\Components\Group::make()
+                        ->schema([
+                            Forms\Components\TextInput::make('district')->label('Distrito')->required(),
+                            Forms\Components\TextInput::make('province')->label('Provincia')->default('Lima'),
+                            Forms\Components\TextInput::make('department')->label('Departamento')->default('Lima'),
+                        ])->columns(3)->columnSpanFull(),
                         Forms\Components\TextInput::make('phone')
                             ->label('Teléfono')
                             ->tel(),

@@ -16,6 +16,7 @@ class Vehicle extends Model
         'plate',
         'brand',
         'model',
+        'color',
         'year',
         'status',
     ];
