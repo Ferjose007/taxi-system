@@ -17,9 +17,11 @@ class ContractResource extends Resource
 {
     protected static ?string $model = Contract::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-check';
 
     protected static ?string $navigationGroup = 'Documentos';
+
+    protected static ?string $navigationLabel = 'Contratos';
 
     protected static ?int $navigationSort = 1;
     
