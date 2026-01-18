@@ -24,7 +24,12 @@ class ContractResource extends Resource
     protected static ?string $navigationLabel = 'Contratos';
 
     protected static ?int $navigationSort = 1;
-    
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['user', 'vehicle']);
+    }
+
     public static function form(Form $form): Form
     {
         return $form

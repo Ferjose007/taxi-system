@@ -25,6 +25,11 @@ class VehicleResource extends Resource
     protected static ?string $modelLabel = 'Vehículo';
     protected static ?string $pluralModelLabel = 'Vehículos';
 
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['owner']);
+    }
+
     public static function form(Form $form): Form
     {
         return $form
@@ -72,7 +77,7 @@ class VehicleResource extends Resource
                             ->placeholder('Ej: Yaris')
                             ->required()
                             ->maxLength(20),
-                        
+
                         // --- NUEVO CAMPO COLOR ---
                         Forms\Components\TextInput::make('color')
                             ->label('Color')
@@ -123,10 +128,10 @@ class VehicleResource extends Resource
 
                 Tables\Columns\TextColumn::make('model')
                     ->label('Modelo'),
-                
+
                 Tables\Columns\TextColumn::make('color') // <--- NUEVO
-                ->label('Color')
-                ->searchable(),
+                    ->label('Color')
+                    ->searchable(),
 
                 // Mostrar nombre del dueño
                 Tables\Columns\TextColumn::make('owner.name')

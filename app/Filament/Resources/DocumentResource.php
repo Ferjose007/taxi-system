@@ -14,6 +14,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Notifications\Notification;
+use Illuminate\Database\Eloquent\Builder;
 
 class DocumentResource extends Resource
 {
@@ -23,6 +24,11 @@ class DocumentResource extends Resource
     protected static ?string $navigationGroup = 'Documentos';
     protected static ?string $navigationLabel = 'Historial de Solicitudes';
     protected static ?int $navigationSort = 2;
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['user']);
+    }
 
     public static function form(Form $form): Form
     {
@@ -35,13 +41,13 @@ class DocumentResource extends Resource
                         Forms\Components\Select::make('type')
                             ->label('Tipo de Solicitud')
                             ->options([
-                                'solicitud_chofer' => 'Solicitud de Nuevo Chofer',
-                                'solicitud_unidad' => 'Ingreso de Unidad Nueva',
+                                'solicitud_chofer' => 'Solicitud de Nuevo Chofer (Accionista solicita)',
+                                'solicitud_unidad' => 'Ingreso de Unidad Nueva (Contratado solicita)',
                             ])
                             ->required()
                             ->live()
                             ->afterStateUpdated(function (Set $set) {
-                                // Limpiamos al cambiar de tipo para evitar confusiones
+                                // Limpiamos todo al cambiar de tipo para no mezclar roles
                                 $set('user_id', null);
                                 $set('vehicle_selector', null);
                                 $set('content', []);
@@ -60,27 +66,42 @@ class DocumentResource extends Resource
 
                 // --- SECCIÓN 2: DATOS DEL SOLICITANTE ---
                 Forms\Components\Section::make('Datos del Solicitante')
-                    ->description('Seleccione al accionista o conductor.')
+                    ->description(fn(Get $get) => match ($get('type')) {
+                        'solicitud_chofer' => 'Seleccione al Accionista que solicita el chofer.',
+                        'solicitud_unidad' => 'Seleccione al Conductor Contratado que ingresa la unidad.',
+                        default => 'Seleccione el tipo de solicitud primero.'
+                    })
                     ->schema([
                         Forms\Components\Select::make('user_id')
-                            ->label('Solicitante')
-                            // Filtro: Accionistas, Contratados o Admin
-                            ->relationship(
-                                'user',
-                                'name',
-                                modifyQueryUsing: fn($query) =>
-                                $query->whereIn('role', ['Accionista', 'Contratado', 'Admin'])
-                            )
+                            ->label(fn(Get $get) => match ($get('type')) {
+                                'solicitud_chofer' => 'Accionista Solicitante',
+                                'solicitud_unidad' => 'Conductor Contratado',
+                                default => 'Solicitante'
+                            })
+                            // --- AQUÍ LA LÓGICA DE FILTRO DINÁMICO ---
+                            ->relationship('user', 'name', modifyQueryUsing: function (Builder $query, Get $get) {
+                                $type = $get('type');
+                                if ($type === 'solicitud_chofer') {
+                                    return $query->where('role', 'Accionista'); // REGLA 2
+                                }
+                                if ($type === 'solicitud_unidad') {
+                                    return $query->where('role', 'Contratado'); // REGLA 3
+                                }
+                                // Si no ha elegido tipo, no mostramos a nadie para evitar errores
+                                return $query->whereNull('id');
+                            })
+                            // ------------------------------------------
                             ->getOptionLabelFromRecordUsing(fn($record) => "{$record->name} {$record->last_name} - {$record->role}")
                             ->searchable(['name', 'last_name', 'dni'])
                             ->preload()
                             ->required()
                             ->live()
                             ->afterStateUpdated(function ($state, Set $set) {
-                                if (!$state) return;
+                                if (!$state)
+                                    return;
                                 $user = \App\Models\User::find($state);
 
-                                // 1. Llenamos datos personales y ubicación
+                                // Llenar datos personales
                                 $set('content.nombre_completo', "$user->name $user->last_name");
                                 $set('content.dni', $user->dni);
                                 $set('content.direccion', $user->address ?? '---');
@@ -88,33 +109,29 @@ class DocumentResource extends Resource
                                 $set('content.provincia', $user->province ?? 'Lima');
                                 $set('content.departamento', $user->department ?? 'Lima');
 
-                                // Limpiamos el selector de vehículo al cambiar de usuario
                                 $set('vehicle_selector', null);
                             }),
 
-                        // Campos de Solo Lectura (Datos Personales)
+                        // Campos ReadOnly
                         Forms\Components\TextInput::make('content.nombre_completo')->label('Nombre')->readOnly(),
                         Forms\Components\TextInput::make('content.dni')->label('DNI')->readOnly(),
                         Forms\Components\TextInput::make('content.direccion')->label('Dirección')->readOnly(),
-
                         Forms\Components\TextInput::make('content.distrito')->label('Distrito')->readOnly(),
                         Forms\Components\TextInput::make('content.provincia')->label('Provincia')->readOnly(),
                         Forms\Components\TextInput::make('content.departamento')->label('Departamento')->readOnly(),
 
                     ])->columns(3),
 
-                // --- SECCIÓN 3: VEHÍCULO (Independiente del Contrato) ---
+                // --- SECCIÓN 3: VEHÍCULO ---
                 Forms\Components\Section::make('Datos del Vehículo')
-                    ->description('Puede seleccionar un auto existente de este usuario o escribir los datos manualmente si es nuevo.')
                     ->schema([
-                        // A. SELECTOR DE AYUDA (Busca autos PROPIOS del usuario, no contratos)
+                        // Selector Opcional (Solo busca autos del usuario seleccionado)
                         Forms\Components\Select::make('vehicle_selector')
                             ->label('Autocompletar con Vehículo Existente (Opcional)')
                             ->options(function (Get $get) {
                                 $userId = $get('user_id');
-                                if (!$userId) return [];
-
-                                // Buscamos autos que pertenezcan a este usuario (dueño)
+                                if (!$userId)
+                                    return [];
                                 return \App\Models\Vehicle::where('user_id', $userId)
                                     ->get()
                                     ->mapWithKeys(fn($v) => [$v->id => "$v->plate - $v->brand $v->model"]);
@@ -122,39 +139,33 @@ class DocumentResource extends Resource
                             ->searchable()
                             ->live()
                             ->columnSpanFull()
-                            ->placeholder('Seleccione un auto para llenar los datos automáticamente...')
                             ->afterStateUpdated(function ($state, Set $set) {
-                                if (!$state) return;
+                                if (!$state)
+                                    return;
                                 $veh = \App\Models\Vehicle::find($state);
                                 if ($veh) {
                                     $set('content.vehiculo_marca', $veh->brand);
                                     $set('content.vehiculo_modelo', $veh->model);
                                     $set('content.vehiculo_placa', $veh->plate);
                                     $set('content.vehiculo_color', $veh->color);
-
-                                    Notification::make()
-                                        ->title('Datos cargados')
-                                        ->body("Se cargó la información del auto $veh->plate")
-                                        ->success()->send();
+                                    Notification::make()->title('Datos cargados')->success()->send();
                                 }
                             }),
 
-                        // B. CAMPOS DEL VEHÍCULO (Siempre editables)
                         Forms\Components\TextInput::make('content.vehiculo_marca')->label('Marca')->required(),
                         Forms\Components\TextInput::make('content.vehiculo_modelo')->label('Modelo')->required(),
                         Forms\Components\TextInput::make('content.vehiculo_placa')->label('Placa')->required(),
-
                         Forms\Components\TextInput::make('content.vehiculo_color')
                             ->label('Color')
-                            // Visible y requerido si es Ingreso de Unidad, u opcional si es Chofer
                             ->visible(fn(Get $get) => $get('type') === 'solicitud_unidad' || $get('vehicle_selector'))
                             ->required(fn(Get $get) => $get('type') === 'solicitud_unidad'),
                     ])->columns(3),
 
-                // --- SECCIÓN 4: NUEVO CHOFER ---
+                // --- SECCIÓN 4: NUEVO CHOFER (Solo para Solicitud Chofer) ---
                 Forms\Components\Group::make()
                     ->schema([
                         Forms\Components\Section::make('Datos del Nuevo Chofer')
+                            ->description('Ingrese los datos del conductor que cubrirá el puesto del Accionista.')
                             ->schema([
                                 Forms\Components\TextInput::make('content.chofer_nombre')->label('Nombre Completo')->required(),
                                 Forms\Components\TextInput::make('content.chofer_dni')->label('DNI')->required(),
