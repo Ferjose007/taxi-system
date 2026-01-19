@@ -30,6 +30,10 @@ class User extends Authenticatable
         'district',
         'province',
         'department',
+        'driver_name',
+        'driver_dni',
+        'driver_address',
+        'driver_phone',
     ];
 
     /**
@@ -65,7 +69,7 @@ class User extends Authenticatable
         return $this->hasMany(Income::class);
     }
 
-    public function contracts():HasMany
+    public function contracts(): HasMany
     {
         return $this->hasMany(Contract::class);
     }
