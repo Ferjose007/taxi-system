@@ -66,7 +66,7 @@
 
     <div class="contenido">
         <p>
-            Yo, <strong>{{ $solicitante_nombre }}</strong>, identificado con N.º de Carnet de Extranjería
+            Yo, <strong>{{ $solicitante_nombre }}</strong>, identificado con N.º de DNI
             {{ $solicitante_dni }},
             con domicilio en {{ $solicitante_direccion }}, del distrito de {{ $distrito }}, provincia de
             {{ $provincia }}
